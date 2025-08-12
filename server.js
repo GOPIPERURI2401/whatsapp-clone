@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const Message = require('./models/Message'); // Make sure the model is imported
+const Message = require('./models/Message');
 
 const app = express();
 
@@ -18,10 +18,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 // --- API Endpoints ---
-// This is the section that was missing in the previous version
-// --- Find the API Endpoints section and add this new route ---
 
-// POST a new message (for the demo)
+// POST a new message
 app.post('/api/messages/send', async (req, res) => {
   try {
     const { body, wa_id, name } = req.body;
@@ -31,13 +29,13 @@ app.post('/api/messages/send', async (req, res) => {
     }
 
     const newMessage = await Message.create({
-      messageId: new mongoose.Types.ObjectId().toString(), // Create a dummy message ID
+      messageId: new mongoose.Types.ObjectId().toString(),
       wa_id: wa_id,
       name: name,
       body: body,
       fromMe: true,
-      status: 'sent', // Default status for sent messages
-      timestamp: Math.floor(Date.now() / 1000), // Current timestamp
+      status: 'sent',
+      timestamp: Math.floor(Date.now() / 1000),
     });
 
     res.status(201).json(newMessage);
@@ -46,6 +44,7 @@ app.post('/api/messages/send', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 // GET all unique conversations
 app.get('/api/conversations', async (req, res) => {
   try {
