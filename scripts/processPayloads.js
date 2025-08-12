@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -14,6 +15,7 @@ const processPayloads = async () => {
   }
 
   try {
+    console.log('Attempting to connect with URI:', process.env.MONGO_URI);
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Script connected to MongoDB...');
   } catch (error) {

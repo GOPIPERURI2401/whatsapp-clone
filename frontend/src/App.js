@@ -71,7 +71,7 @@ function App() {
   };
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/conversations')
+    axios.get(`${process.env.REACT_APP_API_URL}/api/conversations`)
       .then(res => setConversations(res.data))
       .catch(err => console.error("Error fetching conversations:", err));
   }, []);
@@ -101,7 +101,7 @@ function App() {
     const optimisticMessage = { _id: Date.now(), body: newMessage, fromMe: true, status: 'sent', timestamp: Math.floor(Date.now() / 1000) };
     setMessages(prev => [...prev, optimisticMessage]); setNewMessage('');
     try {
-      await axios.post('http://localhost:5000/api/messages/send', { body: newMessage, wa_id: activeChat._id, name: activeChat.name });
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/messages/send`, { /* ... */ }, { body: newMessage, wa_id: activeChat._id, name: activeChat.name });
     } catch (error) { console.error("Error sending message:", error); }
   };
   
