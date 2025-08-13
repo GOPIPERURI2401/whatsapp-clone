@@ -1,8 +1,6 @@
-// Forcing a redeploy on Aug 13
 const express = require('express');
-// ... rest of your code
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors =require('cors');
 require('dotenv').config();
 
 const Message = require('./models/Message');
@@ -25,11 +23,9 @@ mongoose.connect(process.env.MONGO_URI)
 app.post('/api/messages/send', async (req, res) => {
   try {
     const { body, wa_id, name } = req.body;
-
     if (!body || !wa_id || !name) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-
     const newMessage = await Message.create({
       messageId: new mongoose.Types.ObjectId().toString(),
       wa_id: wa_id,
@@ -39,7 +35,6 @@ app.post('/api/messages/send', async (req, res) => {
       status: 'sent',
       timestamp: Math.floor(Date.now() / 1000),
     });
-
     res.status(201).json(newMessage);
   } catch (error) {
     console.error('Error sending message:', error);
@@ -50,33 +45,7 @@ app.post('/api/messages/send', async (req, res) => {
 // GET all unique conversations
 app.get('/api/conversations', async (req, res) => {
   try {
-    const conversations = await Message.aggregate([
-      { $sort: { timestamp: -1 } },
-      {
-        $group: {
-          _id: '$wa_id',
-          name: { $first: '$name' },
-          lastMessage: { $first: '$body' },
-          lastMessageTimestamp: { $first: '$timestamp' },
-        },
-      },
-      { $sort: { lastMessageTimestamp: -1 } },
-    ]);
-    res.json(conversations);
-  } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// GET all messages for a specific conversation
-// GET all unique conversations (simplified version)
-app.get('/api/conversations', async (req, res) => {
-  try {
-    // 1. Get all messages, sorted by most recent
     const messages = await Message.find().sort({ timestamp: -1 });
-
-    // 2. Manually group them in JavaScript to find the latest message for each chat
     const conversationsMap = new Map();
     for (const msg of messages) {
       if (!conversationsMap.has(msg.wa_id)) {
@@ -88,16 +57,29 @@ app.get('/api/conversations', async (req, res) => {
         });
       }
     }
-
-    // 3. Convert the map to an array and send it
     const conversations = Array.from(conversationsMap.values());
     res.json(conversations);
-
   } catch (error) {
     console.error('Error fetching conversations:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// GET all messages for a specific conversation
+app.get('/api/messages/:wa_id', async (req, res) => {
+  try {
+    const { wa_id } = req.params;
+    const messages = await Message.find({ wa_id: wa_id }).sort({ timestamp: 'asc' });
+    if (!messages) {
+      return res.status(404).json({ message: 'No messages found for this user.' });
+    }
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 // --- Test Route ---
 app.get('/', (req, res) => {
