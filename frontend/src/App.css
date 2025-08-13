@@ -325,3 +325,6 @@ div.emoji-picker-react { border: 1px solid #ddd !important; box-shadow: 0 4px 12
     min-width: 100%;
   }
 }
+.sidebar {
+  background-color: white;
+}
