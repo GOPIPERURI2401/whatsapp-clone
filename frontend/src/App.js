@@ -82,7 +82,7 @@ function App() {
     setProfileOpen(false);
     const fetchMessages = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/messages/${activeChat._id}`);
+       const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/messages/${activeChat._id}`);
         const messagesWithSeparators = []; let lastDate = null;
         response.data.forEach(msg => {
           const messageDate = new Date(msg.timestamp * 1000).toDateString();
