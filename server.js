@@ -70,22 +70,34 @@ app.get('/api/conversations', async (req, res) => {
 });
 
 // GET all messages for a specific conversation
-app.get('/api/messages/:wa_id', async (req, res) => {
+// GET all unique conversations (simplified version)
+app.get('/api/conversations', async (req, res) => {
   try {
-    const { wa_id } = req.params;
-    const messages = await Message.find({ wa_id: wa_id }).sort({ timestamp: 'asc' });
+    // 1. Get all messages, sorted by most recent
+    const messages = await Message.find().sort({ timestamp: -1 });
 
-    if (!messages) {
-      return res.status(404).json({ message: 'No messages found for this user.' });
+    // 2. Manually group them in JavaScript to find the latest message for each chat
+    const conversationsMap = new Map();
+    for (const msg of messages) {
+      if (!conversationsMap.has(msg.wa_id)) {
+        conversationsMap.set(msg.wa_id, {
+          _id: msg.wa_id,
+          name: msg.name,
+          lastMessage: msg.body,
+          lastMessageTimestamp: msg.timestamp,
+        });
+      }
     }
 
-    res.json(messages);
+    // 3. Convert the map to an array and send it
+    const conversations = Array.from(conversationsMap.values());
+    res.json(conversations);
+
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    console.error('Error fetching conversations:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // --- Test Route ---
 app.get('/', (req, res) => {
