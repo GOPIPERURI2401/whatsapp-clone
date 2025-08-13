@@ -313,6 +313,8 @@ div.emoji-picker-react { border: 1px solid #ddd !important; box-shadow: 0 4px 12
   }
   .App.show-chat-window .chat-window {
     transform: translateX(0);
+    height: 100% !important;
+    background: transparent !important ;
   }
   .back-btn-mobile {
     display: block;
