@@ -333,3 +333,16 @@ div.emoji-picker-react { border: 1px solid #ddd !important; box-shadow: 0 4px 12
   background-color: white;
   height: 100%;
 }
+.encrypted-message {
+  /* Activates Flexbox for easy alignment */
+  display: flex;
+
+  /* Centers the whole group horizontally (icon + text) */
+  justify-content: center;
+
+  /* Vertically aligns the icon and text to the middle */
+  align-items: center;
+
+  /* Adds a small space between the icon and the text */
+  gap: 8px;
+}
