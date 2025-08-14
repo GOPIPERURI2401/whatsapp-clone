@@ -3,7 +3,7 @@ import axios from 'axios';
 import Picker from 'emoji-picker-react';
 import './App.css';
 
-// --- Icon Components ---
+// --- Icon Components (No changes needed here) ---
 const UserIcon = () => (<svg width="60%" height="60%" viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12ZM12 14C8.68629 14 6 16.6863 6 20H18C18 16.6863 15.3137 14 12 14Z" fill="white"/></svg>);
 const EmojiIcon = () => (<svg viewBox="0 0 24 24" height="24" width="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM8.5 9.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5S7 11.83 7 11s.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5S14 11.83 14 11s.67-1.5 1.5-1.5zm-3.5 4c-1.48 0-2.75.81-3.45 2H15.9c-.7-1.19-1.97-2-3.45-2z"></path></svg>);
 const AttachIcon = () => (<svg viewBox="0 0 24 24" height="24" width="24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>);
@@ -98,11 +98,58 @@ function App() {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeChat) return;
-    const optimisticMessage = { _id: Date.now(), body: newMessage, fromMe: true, status: 'sent', timestamp: Math.floor(Date.now() / 1000) };
-    setMessages(prev => [...prev, optimisticMessage]); setNewMessage('');
+
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const optimisticMessage = { 
+        _id: Date.now(), 
+        body: newMessage, 
+        fromMe: true, 
+        status: 'sent', 
+        timestamp: currentTimestamp 
+    };
+    
+    // --- FIX STARTS HERE ---
+
+    // 1. Optimistically update the local message list for a fast UI
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // 2. Optimistically update the main conversations list
+    const updatedConversations = conversations
+      .map(convo => {
+        if (convo._id === activeChat._id) {
+          return {
+            ...convo,
+            lastMessage: newMessage,
+            lastMessageTimestamp: currentTimestamp,
+          };
+        }
+        return convo;
+      })
+      // Sort to bring the most recent chat to the top
+      .sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp);
+    
+    setConversations(updatedConversations);
+
+    // 3. Clear the input field
+    setNewMessage('');
+
+    // 4. Send the message to the backend (Corrected API Call)
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/messages/send`, { /* ... */ }, { body: newMessage, wa_id: activeChat._id, name: activeChat.name });
-    } catch (error) { console.error("Error sending message:", error); }
+      // The data payload should be the second argument of axios.post
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/messages/send`,
+        {
+          body: newMessage,
+          wa_id: activeChat._id,
+          name: activeChat.name,
+        }
+      );
+      // You could update the message status from 'sent' to 'delivered' here if needed
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Optional: Logic to show a 'failed to send' status on the UI
+    }
+    // --- FIX ENDS HERE ---
   };
   
   const handleMicClick = () => { console.log("Microphone clicked! (This is a simulation)"); };
@@ -130,7 +177,7 @@ function App() {
       return (
         <>
           <div className="chat-header" onClick={() => setProfileOpen(true)}>
-            <button className="back-btn-mobile" onClick={() => setActiveChat(null)}><BackIcon /></button>
+            <button className="back-btn-mobile" onClick={(e) => { e.stopPropagation(); setActiveChat(null); }}><BackIcon /></button>
             <div className="avatar-placeholder"><UserIcon /></div>
             <div className="chat-header-info">
               <h3>{activeChat.name}</h3>
@@ -139,14 +186,14 @@ function App() {
           </div>
           <div className="message-list">
             {messages.map((msg) => {
-              if (msg.type === 'date_separator') { const separatorDate = new Date(msg.date); const today = new Date(); const isToday = separatorDate.toDateString() === today.toDateString(); return (<div key={msg._id} className="date-separator"><span>{isToday ? 'Today' : separatorDate.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>); }
+              if (msg.type === 'date_separator') { const separatorDate = new Date(msg.date); const today = new Date(); const yesterday = new Date(); yesterday.setDate(today.getDate() - 1); const isToday = separatorDate.toDateString() === today.toDateString(); const isYesterday = separatorDate.toDateString() === yesterday.toDateString(); return (<div key={msg._id} className="date-separator"><span>{isToday ? 'Today' : isYesterday ? 'Yesterday' : separatorDate.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>); }
               return (<div key={msg._id} className={`message-bubble ${msg.fromMe ? 'from-me' : 'from-them'}`}><p className="message-body">{msg.body}</p><div className="message-meta"><span className="message-timestamp">{new Date(msg.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>{msg.fromMe && <span className={`status-ticks ${msg.status}`}>✓✓</span>}</div></div>);
             })}
           </div>
           <div className="chat-footer">
             {showEmojiPicker && <div className="emoji-picker-container" ref={emojiPickerRef}><Picker onEmojiClick={onEmojiClick} /></div>}
             <div className="input-container"><button type="button" className="icon-btn" onClick={() => setShowEmojiPicker(val => !val)}><EmojiIcon /></button><label htmlFor="file-upload" className="icon-btn"><AttachIcon /></label><input id="file-upload" type="file" style={{ display: 'none' }} /><form onSubmit={handleSendMessage} className="message-form"><input type="text" className="message-input" placeholder="Type a message" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} /></form></div>
-            {newMessage ? (<button className="mic-send-btn" onClick={handleSendMessage}><SendIcon /></button>) : (<button className="mic-send-btn" onClick={handleMicClick}><MicIcon /></button>)}
+            {newMessage ? (<button type="button" className="mic-send-btn" onClick={handleSendMessage}><SendIcon /></button>) : (<button type="button" className="mic-send-btn" onClick={handleMicClick}><MicIcon /></button>)}
           </div>
         </>
       );
@@ -159,7 +206,7 @@ function App() {
       case 'myProfile':
         return <ProfilePlaceholder />;
       default:
-        return <div className="placeholder"><p>Select a chat to start messaging</p></div>;
+        return <div className="placeholder"><div className="placeholder-icon large"><ChatsIcon/></div><h2>WhatsApp Web</h2><p>Send and receive messages without keeping your phone online.<br/>Use WhatsApp on up to 4 linked devices and 1 phone at the same time.</p><div className="encrypted-message"><LockIcon /> Your personal messages are end-to-end encrypted</div></div>;
     }
   };
 
@@ -188,7 +235,7 @@ function App() {
   );
 }
 
-// --- Sidebar Content Components ---
+// --- Sidebar Content Components (No changes needed here) ---
 const ChatsPanel = ({ conversations, activeChat, setActiveChat, searchQuery, setSearchQuery }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -223,7 +270,7 @@ const StatusPanel = ({ onBack }) => ( <div className="panel"><div className="pan
 const SettingsPanel = ({ onBack }) => ( <div className="panel"><div className="panel-header"><button className="icon-btn" onClick={onBack}><BackIcon /></button><h2>Settings</h2></div><div className="panel-content"><div className="settings-profile-summary"><div className="avatar-placeholder"><UserIcon /></div><div className="settings-info"><h3>Your Name</h3><p>Can't talk, WhatsApp only</p></div></div><div className="settings-list"><div className="settings-item"><AccountIcon /><span>Account</span></div><div className="settings-item"><PrivacyIcon /><span>Privacy</span></div><div className="settings-item"><ChatsIcon /><span>Chats</span></div><div className="settings-item"><HelpIcon /><span>Help</span></div></div></div></div>);
 const MyProfilePanel = ({ onBack }) => ( <div className="panel"><div className="panel-header"><button className="icon-btn" onClick={onBack}><BackIcon /></button><h2>Profile</h2></div><div className="panel-content profile-page"><div className="profile-page-avatar"><div className="avatar-placeholder large"><UserIcon /></div></div><div className="profile-page-section"><label>Your name</label><div className="editable-field"><span>Your Name</span><EditIcon /></div></div><div className="profile-page-section"><label>About</label><div className="editable-field"><span>Can't talk, WhatsApp only</span><EditIcon /></div></div></div></div>);
 
-// --- Placeholder Components ---
+// --- Placeholder Components (No changes needed here) ---
 const StatusPlaceholder = () => (<div className="placeholder-container"><div className="placeholder-icon large"><StatusIcon /></div><h2>Share status updates</h2><p>Share photos, videos and text that disappear after 24 hours.</p><div className="encrypted-message"><LockIcon /> Your status updates are end-to-end encrypted</div></div>);
 const SettingsPlaceholder = () => (<div className="placeholder-container"><div className="placeholder-icon large"><SettingsIcon /></div><h2>Settings</h2></div>);
 const ProfilePlaceholder = () => (<div className="placeholder-container"><div className="placeholder-icon large"><UserIcon /></div><h2>Profile</h2></div>);
