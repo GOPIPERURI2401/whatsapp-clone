@@ -57,7 +57,8 @@ body {
 
 /* --- MAIN SIDEBAR STYLES --- */
 .sidebar {
-  width: 400px;
+  width: 30%;
+  height: 100%;
   min-width: 300px;
   max-width: 500px;
   border-right: 1px solid #ddd;
@@ -330,4 +331,5 @@ div.emoji-picker-react { border: 1px solid #ddd !important; box-shadow: 0 4px 12
 }
 .main-interface {
   background-color: white;
+  height: 100%;
 }
